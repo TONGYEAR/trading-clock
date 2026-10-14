@@ -1,6 +1,6 @@
 # Oil Desk · 三城交易时钟
 
-[中文说明](#使用) · [English documentation](#english)
+[中文](#使用) · [English](#english)
 
 面向 WTI 原油期货 CL / MCL 的 Windows 桌面时钟。
 
@@ -10,108 +10,81 @@
 
 下载仓库 ZIP 并解压，双击 TradingClock.exe。右键窗口、托盘图标或顶部“设置”打开菜单。
 
-- 标准竖版、紧凑竖版、横条布局，可贴到屏幕顶部。
-- 浮窗 / 普通窗口、置顶、透明度、75%–175% 缩放。超出屏幕时自动缩小。
-- 自选伦敦、纽约、上海、东京、香港、悉尼、芝加哥，自动处理夏令时。
-- 位置锁定和鼠标穿透；双击托盘图标恢复操作。Ctrl+Alt+T 未被占用时也可恢复。穿透不会跨重启保留。
-- 关闭窗口或顶部“−”隐藏到托盘，提醒继续运行。完全关闭请选择“退出程序”。
-- 开机自动启动开关仅对当前用户生效；程序路径改变后需重新开启。
-- 个人设置保存在 LocalAppData/TradingClock/settings.xml，不上传至仓库。
+- 标准竖版、紧凑竖版、横条；可贴到屏幕顶部。
+- 浮窗 / 普通窗口、置顶、透明度、75%–175% 缩放，超出屏幕时自动缩小。
+- 自选伦敦、纽约、上海、东京、香港、悉尼、芝加哥，自动适配夏令时。
+- 位置锁定与鼠标穿透；双击托盘图标恢复。Ctrl+Alt+T 未被占用时也可恢复，穿透不会跨重启保留。
+- 关闭窗口隐藏到托盘；彻底关闭请选择“退出程序”。
+- 可选当前用户登录 Windows 后自动启动。移动程序后需重新开启此设置。
+- 个人设置保存在 %LOCALAPPDATA%/TradingClock/settings.xml，不上传仓库。
 
-## 时段与提醒
+## 重要时间点倒计时
 
-默认 WTI CL / MCL：芝加哥时区周日至周四 17:00 开市，次日 16:00 收市，处理周末及美国夏令时。
-另有 Brent 常规时段参考和 CFD 自定义时区、开收市时间、开市星期。Brent 临时夏令时调整需按 ICE 公告设置覆盖。
+底部显示四项，附上海时间对应的日期和时刻：
 
-“常规时段内 / 常规休市段”不是行情连接状态。未联网核验节假日、临时停市、到期合约和经纪商限制。可通过“特殊休市 / 提前收市设置”覆盖；日期按时段开市日，例如 WTI 周一提前收市需覆盖周日开始的跨夜时段。
+1. WTI 下一次开市或休市（依据常规时段）。
+2. 下一次 EIA 原油库存报告公布。
+3. 纽约工作日 09:00 关注时间。
+4. 伦敦工作日 08:00 关注时间。
 
-伦敦 / 纽约关注窗仅为各地工作日 08:00–17:00 的参考，重叠时显示标记，不代表交易所开盘或保证流动性。
+时间到达后自动显示下一次。没有事件提醒、通知弹窗或声音。伦敦与纽约关注时间跳过周末，但不是交易所开市时间，不自动排除节假日。
 
-- 开市 / 休市默认提前 5 分钟提醒，可选 1、5、10、15、30 分钟和声音开关。
-- 事件支持增删改、清理过期、输入时区及单独提前量，可填写 API 库存、OPEC、CPI、非农等。
-- 预载 2026 年剩余 EIA 日程，含截至 2026-10-14 官方公布的延期。2026-10-15 纽约 12:00 对应上海 2026-10-16 00:00。
-- EIA 为静态日程快照，不自动延展到下一年或下载临时修订，请按公告修改。
-- 程序运行时才提醒，不唤醒休眠电脑。恢复时仍在提醒窗口内的事件会提醒，过期事件不会集中弹出。通知受 Windows 勿扰设置影响。
+默认 WTI 常规时段为芝加哥时间周日至周四 17:00 开市、次日 16:00 收市，处理美国夏令时。另有 Brent 和自定义平台时段。未联网核验节假日、临时停市、到期合约及经纪商限制。特殊时段可手动覆盖；日期按开市日，例如 WTI 周一提前收市应覆盖周日开始的时段。Brent 临时夏令时调整也需按公告覆盖。
 
-## 官方来源（核对：2026-10-14）
-
-- [CME WTI](https://www.cmegroup.com/education/courses/event-contracts-underlying-markets/wti-overview)
-- [CME CL / MCL](https://www.cmegroup.com/cn-s/trading/energy/micro-wti-crude-oil-futures.html)
-- [CME 节假日](https://www.cmegroup.com/trading-hours.html)
-- [ICE Brent](https://www.ice.com/products/219/Brent-Crude-Futures)
-- [EIA 日程](https://www.eia.gov/petroleum/supply/weekly/schedule.php)
+EIA 使用截至 2026-10-14 核对的 2026 年官方日程快照，含已公布延期，不自动获取临时修订或下一年日程。右键“编辑 EIA 公布时间”可增删改。其他旧版事件不显示。时钟依赖电脑系统时间，请启用 Windows 自动校时。
 
 ## 构建与验证
 
-从托盘退出时钟，在 Windows PowerShell 运行 ./build.ps1，使用 Windows .NET Framework C# 编译器，无第三方依赖。
-源码：TradingClock.cs（界面、提醒、设置）及 OilEngine.cs（时段与事件）。make-icon.ps1 生成图标。
+从托盘退出程序，Windows PowerShell 运行 ./build.ps1。使用 .NET Framework C# 编译器和 Windows Forms，无第三方包。
 
-自检：TradingClock.exe --self-test <已存在的绝对输出目录>。覆盖维护边界、周末、春秋夏令时、特殊休市、提前收市、Brent 周日开盘、自定义时段、EIA 延期、提醒窗口、穿透恢复、设置序列化与界面渲染，不修改个人设置和开机启动。
+源码：TradingClock.cs（界面与设置）、OilEngine.cs（时区和日程）。make-icon.ps1 生成图标。
+自检：TradingClock.exe --self-test <已存在的绝对输出目录>，输出结果与界面图片，不修改个人设置或开机启动。
 
 ## English
 
-Oil Desk is a Windows desktop world clock designed for traders following WTI crude oil futures (CL / MCL). It combines local times, reference trading sessions, countdowns, and event reminders. The application interface is currently in Chinese; this section explains its controls in English.
+Oil Desk is a Windows desktop world clock for traders following WTI crude oil futures (CL / MCL). The application interface is currently in Chinese.
 
 ### Getting started
 
-Download the repository ZIP, extract it, and double-click `TradingClock.exe`. No installation is required. Right-click the window or system tray icon, or click **设置** (Settings) in the header.
+Download the repository ZIP, extract it, and launch TradingClock.exe. No installation is required. Right-click the window or tray icon, or click 设置 (Settings).
 
-- **Layouts:** standard vertical, compact vertical, and horizontal strip, with an option to place the strip at the top of the current screen.
-- **Window controls:** floating or standard window, always on top, opacity, and 75%–175% scaling. The window scales down if necessary to fit the screen.
-- **Cities:** London, New York, Shanghai, Tokyo, Hong Kong, Sydney, and Chicago, using Windows time-zone and daylight-saving rules.
-- **Position lock and click-through:** double-click the system tray icon to restore mouse interaction. `Ctrl+Alt+T` also restores the window when that hotkey is available. Click-through is not retained after a restart.
-- **System tray:** closing the window or clicking the header's minus sign hides it to the tray while reminders keep running. Choose **退出程序** (Exit application) to quit completely.
-- **Start with Windows:** the optional startup setting applies to the current user at sign-in. If you move the executable, turn startup off and on again to update its path.
-- **Settings:** personal preferences and events are stored in `%LOCALAPPDATA%\TradingClock\settings.xml`, outside the repository.
+- Standard vertical, compact vertical, or horizontal strip layouts, with a top-of-screen placement option.
+- Floating or standard windows, always on top, opacity, and 75%–175% scaling. The window scales down to fit the screen when needed.
+- London, New York, Shanghai, Tokyo, Hong Kong, Sydney, and Chicago, using Windows time zones and DST rules.
+- Position lock and mouse click-through. Double-click the tray icon to restore interaction; Ctrl+Alt+T also works if available. Click-through does not persist across restarts.
+- Closing the window hides it to the tray. Choose 退出程序 (Exit application) to quit completely.
+- Optional startup at Windows sign-in for the current user. Re-enable it after moving the executable.
+- Personal settings are stored in %LOCALAPPDATA%/TradingClock/settings.xml, outside this repository.
 
-The clock follows your computer's system time. Enable automatic time synchronization in Windows for accurate display.
+### Key-time countdowns
 
-### Trading sessions and countdowns
+The bottom panel displays four countdowns, each with its target date and time in Shanghai:
 
-The default WTI CL / MCL reference schedule uses Chicago time: sessions start at 17:00 Sunday through Thursday and end at 16:00 the following day. Weekends and US daylight saving are handled automatically.
+1. The next WTI session opening or closure, based on the regular schedule.
+2. The next EIA Weekly Petroleum Status Report release.
+3. The next weekday at 09:00 New York time, as a focus point.
+4. The next weekday at 08:00 London time, as a focus point.
 
-The app also includes a Brent reference schedule and a custom schedule for broker-specific instruments, with configurable time zone, opening time, closing time, and opening weekdays. Temporary ICE daylight-saving adjustments must be entered as overrides.
+After a target is reached, the next occurrence is shown. Event alerts, notification popups, and sounds have been removed. London and New York focus points skip weekends, not holidays; they are not exchange opening times.
 
-Session indicators describe the configured schedule, not a live connection to an exchange. Exchange holidays, emergency halts, expiring contracts, and broker restrictions are not checked online. Use **特殊休市 / 提前收市设置** (Special closures / early closes) to override a session. The date is the session's opening date: for a WTI session that closes early on Monday, override the session that starts on Sunday.
+The default WTI reference schedule opens at 17:00 Chicago time Sunday through Thursday and closes at 16:00 the next day, with US DST handled automatically. Brent and custom broker schedules are also available. Holidays, emergency halts, expiring contracts, and broker restrictions are not checked online. Enter overrides under 特殊休市 / 提前收市设置 (Special closures / early closes), using the session opening date. For a WTI early close on Monday, override Sunday's opening session. Temporary ICE DST adjustments also require manual overrides.
 
-The London and New York focus windows are simply weekdays from 08:00 to 17:00 in each city's local time. Their overlap is highlighted; these are not oil exchange opening times or guarantees of liquidity.
+EIA dates are a static 2026 official schedule snapshot checked on October 14, 2026, including announced postponements. Updates and future years are not downloaded automatically. Use 编辑 EIA 公布时间 (Edit EIA release times) to add, edit, or delete dates. Other legacy events are not displayed. The clock uses your system time; enable Windows automatic time synchronization.
 
-### Reminders and economic events
+### Build and test
 
-- Opening and closing alerts default to five minutes in advance. Available lead times are 1, 5, 10, 15, or 30 minutes, with optional sound.
-- **事件提醒** (Event reminders) lets you add, edit, delete, and clear past events. Select the event's input time zone and an individual alert lead time. Examples include API inventories, OPEC announcements, CPI, and nonfarm payrolls; these events are entered manually.
-- Remaining 2026 EIA Weekly Petroleum Status Report dates are preloaded from the official schedule checked on October 14, 2026, including announced postponements. The October 15 release at 12:00 New York time corresponds to October 16 at 00:00 in Shanghai.
-- The EIA calendar is a static snapshot. It does not automatically fetch revisions or extend into the next year. Check the official schedule and edit events when necessary.
-- Reminders require the app to be running and do not wake a sleeping computer. After resuming, events still within their reminder window can notify; stale events do not generate a backlog of alerts. Windows Do Not Disturb may suppress notification banners.
+Exit the app from the tray, then run ./build.ps1 in Windows PowerShell. Requires the .NET Framework C# compiler and Windows Forms, with no third-party packages.
 
-### Official references
+TradingClock.cs contains the UI and settings; OilEngine.cs contains time-zone and schedule logic. make-icon.ps1 generates the icon.
 
-Schedule information was checked on October 14, 2026:
+Run TradingClock.exe --self-test with an existing absolute output directory to generate test results and UI previews. Tests cover session boundaries, weekends, DST, overrides, EIA dates, focus countdown rollover, click-through recovery, settings serialization, and rendering. Self-tests do not modify personal settings or Windows startup registration.
 
-- [CME WTI overview](https://www.cmegroup.com/education/courses/event-contracts-underlying-markets/wti-overview)
-- [CME Micro WTI futures FAQ](https://www.cmegroup.com/education/articles-and-reports/micro-wti-crude-oil-futures-faq)
-- [CME holiday and trading hours](https://www.cmegroup.com/trading-hours.html)
-- [ICE Brent contract specifications](https://www.ice.com/products/219/Brent-Crude-Futures)
+## Official sources / 官方来源
+
+Schedule sources checked on 2026-10-14:
+
+- [CME WTI](https://www.cmegroup.com/education/courses/event-contracts-underlying-markets/wti-overview)
+- [CME Micro WTI FAQ](https://www.cmegroup.com/education/articles-and-reports/micro-wti-crude-oil-futures-faq)
+- [CME holiday hours](https://www.cmegroup.com/trading-hours.html)
+- [ICE Brent](https://www.ice.com/products/219/Brent-Crude-Futures)
 - [EIA release schedule](https://www.eia.gov/petroleum/supply/weekly/schedule.php)
-
-### Building and testing
-
-Requires Windows with the .NET Framework C# compiler and Windows Forms. No third-party packages are required. Exit the running app from its tray menu before building, then run in PowerShell:
-
-```powershell
-./build.ps1
-```
-
-Source files:
-
-- `TradingClock.cs`: UI, notifications, tray controls, and settings.
-- `OilEngine.cs`: trading sessions, time-zone conversion, and event schedule.
-- `make-icon.ps1`: icon generation.
-
-To run the built-in checks, provide an existing absolute output directory:
-
-```powershell
-Start-Process -FilePath .\TradingClock.exe -ArgumentList '--self-test C:\Temp\OilDeskTests' -Wait
-```
-
-Create that directory first or replace it with your own existing directory. Results and UI preview images are written there. Checks cover maintenance boundaries, weekends, spring and autumn DST, special closures, early closes, Brent's Sunday opening, custom sessions, EIA postponements, reminder windows, click-through recovery, settings serialization, and UI rendering. Self-tests do not modify personal settings or Windows startup registration.

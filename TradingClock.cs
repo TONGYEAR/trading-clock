@@ -45,7 +45,7 @@ public class TradingClock : Form {
             tray.DoubleClick+=delegate { RestoreClock(); };
             tray.BalloonTipClicked+=delegate { RestoreClock(); };
         }
-        timer.Interval=500; timer.Tick+=delegate { Invalidate(); if(!testing) CheckAlerts(); }; timer.Start();
+        timer.Interval=500; timer.Tick+=delegate { Invalidate(); }; timer.Start();
         MouseDown+=delegate(object sender,MouseEventArgs e) {
             if(e.Button!=MouseButtons.Left) return;
             float x=e.X/scale,y=e.Y/scale;
@@ -82,7 +82,7 @@ public class TradingClock : Form {
     }
     void ApplyLayout() {
         canvasW=cfg.Layout==2 ? Math.Max(600,Math.Min(4,cfg.Cities.Count)*200+24) : 404;
-        canvasH=cfg.Layout==2 ? 40+(int)Math.Ceiling(cfg.Cities.Count/4.0)*90+122 : 40+cfg.Cities.Count*(cfg.Layout==1?53:78)+128;
+        canvasH=cfg.Layout==2 ? 40+(int)Math.Ceiling(cfg.Cities.Count/4.0)*90+204 : 40+cfg.Cities.Count*(cfg.Layout==1?53:78)+204;
         scale=cfg.Scale/100f;
         var area=Screen.FromPoint(Location).WorkingArea;
         scale=Math.Min(scale,Math.Min((area.Width-16f)/canvasW,(area.Height-16f)/canvasH));
@@ -127,31 +127,13 @@ public class TradingClock : Form {
         market.DropDownItems.Add(Item("CME 官方节假日与交易时间",()=>Process.Start("https://www.cmegroup.com/trading-hours.html")));
         market.DropDownItems.Add(Item("ICE 官方交易时间",()=>Process.Start("https://www.ice.com/products/219/Brent-Crude-Futures")));
         m.Items.Add(market);
-        m.Items.Add(Item("事件提醒（EIA / CPI / 非农 / OPEC）…",EditEvents));
-        m.Items.Add(Check("开盘 / 休市提前提醒",()=>cfg.MarketAlerts,()=>cfg.MarketAlerts=!cfg.MarketAlerts));
-        var lead=new ToolStripMenuItem("市场提醒提前量");foreach(int v in new int[]{1,5,10,15,30}){int n=v;lead.DropDownItems.Add(Check(v+" 分钟",()=>cfg.LeadMinutes==n,()=>cfg.LeadMinutes=n));}m.Items.Add(lead);
-        m.Items.Add(Check("提醒声音",()=>cfg.Sound,()=>cfg.Sound=!cfg.Sound));
-        m.Items.Add(Item("测试提醒",()=>Notify("提醒测试","Oil Desk 提醒已开启。")));
+        m.Items.Add(Item("编辑 EIA 公布时间…",EditEvents));
         m.Items.Add(Check("开机自动启动（登录 Windows 后）",StartupEnabled,()=>SetStartup(!StartupEnabled())));
         m.Items.Add(Item("隐藏到系统托盘",()=>Hide()));
         m.Items.Add(new ToolStripSeparator());
         m.Items.Add(Item("退出程序",()=>{quitting=true;Close();}));
         m.Opening+=delegate {try{menuChecks();}catch{}};
         return m;
-    }
-    void Notify(string title,string body) { if(tray!=null) tray.ShowBalloonTip(8000,title,body,ToolTipIcon.Info); if(cfg.Sound) System.Media.SystemSounds.Exclamation.Play(); }
-    void CheckAlerts() {
-        DateTime now=DateTime.UtcNow; bool changed=false;
-        foreach(var ev in cfg.Events) if(OilEngine.Due(now,ev.Utc,ev.Lead) && !cfg.Fired.Contains(ev.Id)) {
-            cfg.Fired.Add(ev.Id);changed=true;Notify(ev.Title,ev.ToString());
-        }
-        if(cfg.MarketAlerts) {
-            var state=OilEngine.State(now,cfg); string id="market:"+cfg.Market+":"+state.Next.ToString("O");
-            if(state.Next!=DateTime.MaxValue && OilEngine.Due(now,state.Next,cfg.LeadMinutes) && !cfg.Fired.Contains(id)) {
-                cfg.Fired.Add(id);changed=true;Notify(cfg.Market+" 常规时段提醒", "距离"+state.Action+"约 "+Math.Ceiling((state.Next-now).TotalMinutes)+" 分钟；特殊交易日请核对平台公告。");
-            }
-        }
-        if(changed) { if(cfg.Fired.Count>2000) cfg.Fired.RemoveRange(0,1000); SaveSettings(); }
     }
     void Label(Graphics g,string text,float size,Color color,float x,float y,bool bold=false,string face="Microsoft YaHei UI",float width=0) {
         using(var f=new Font(face,size,bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel))
@@ -187,15 +169,22 @@ public class TradingClock : Form {
                 if(cfg.Layout!=1) { Label(g,OilEngine.Codes[i],11,muted,x+12,y+36,false,"Consolas");Label(g,local.ToString("MM/dd ddd",System.Globalization.CultureInfo.InvariantCulture),12,muted,x+255,y+45,false,"Consolas");Label(g,OilEngine.Zone(OilEngine.ZoneIds[i]).IsDaylightSavingTime(local)?"DST":"STD",10,muted,x+12,y+53,false,"Consolas"); }
             }
         }
-        float fy=canvasH-121;var st=OilEngine.State(utc,cfg);
-        Label(g,cfg.Market+" · "+(st.Open?"常规时段内":"常规休市段"),14,st.Open?green:gold,16,fy,true);
-        Label(g,st.Next==DateTime.MaxValue?"未来两周无开市设置":"距"+st.Action+"  "+OilEngine.Countdown(st.Next-utc),13,Color.White,16,fy+23);
-        bool london=OilEngine.BusinessHours(utc,"GMT Standard Time"),ny=OilEngine.BusinessHours(utc,"Eastern Standard Time");
-        Label(g,"关注窗 伦敦 "+(london?"●":"○")+"  纽约 "+(ny?"●":"○")+(london&&ny?"  重叠":"")+"  [各地 08–17]",11,muted,16,fy+45);
-        var next=cfg.Events.Where(v=>v.Utc>utc).OrderBy(v=>v.Utc).FirstOrDefault();
-        Label(g,next==null?"暂无事件 · 右键添加提醒":"下个事件 "+next.Title+" · "+OilEngine.Countdown(next.Utc-utc),11,gold,16,fy+66,false,"Microsoft YaHei UI",canvasW-30);
-        Label(g,"时段仅供参考 · 未联网校验假期 / 临时停市",10,muted,16,canvasH-26);
+        float fy=canvasH-200;var st=OilEngine.State(utc,cfg);
+        Label(g,"重要时间 / COUNTDOWN",12,green,16,fy,true);
+        CountdownRow(g,cfg.Market+" "+st.Action+" · 常规",st.Next,utc,fy+24,st.Open?green:gold);
+        var next=cfg.Events.Where(v=>v.Id.StartsWith("eia-") && v.Utc>utc).OrderBy(v=>v.Utc).FirstOrDefault();
+        CountdownRow(g,"EIA 原油库存",next==null?DateTime.MaxValue:next.Utc,utc,fy+60,gold);
+        CountdownRow(g,"纽约 09:00 · 关注",OilEngine.NextWeekdayTime(utc,"Eastern Standard Time",9),utc,fy+96,Color.White);
+        CountdownRow(g,"伦敦 08:00 · 关注",OilEngine.NextWeekdayTime(utc,"GMT Standard Time",8),utc,fy+132,Color.White);
+        Label(g,"时段为常规参考；EIA 为日程快照；日期按上海显示",9,muted,16,canvasH-26);
         Label(g,"右键设置 · 托盘恢复",9,muted,16,canvasH-13);
+    }
+    void CountdownRow(Graphics g,string name,DateTime target,DateTime utc,float y,Color color) {
+        Label(g,name,13,color,16,y,true);
+        string date=target==DateTime.MaxValue?"待更新日程":TimeZoneInfo.ConvertTimeFromUtc(target,OilEngine.Zone("China Standard Time")).ToString("MM/dd HH:mm");
+        Label(g,date,10,muted,16,y+18,false,"Consolas");
+        string value=target==DateTime.MaxValue?"--:--:--":OilEngine.Countdown(target-utc);
+        Label(g,value,22,color,canvasW-197,y+3,true,"Consolas");
     }
     Form Dialog(string title,int width,int height) { return new Form {Text=title,ClientSize=new Size(width,height),StartPosition=FormStartPosition.CenterScreen,FormBorderStyle=FormBorderStyle.FixedDialog,MaximizeBox=false,MinimizeBox=false,TopMost=true,Font=new Font("Microsoft YaHei UI",9),BackColor=Color.FromArgb(240,244,248),AutoScaleMode=AutoScaleMode.None}; }
     Label TextAt(Form f,string text,int x,int y,int w) { var c=new Label {Text=text,Left=x,Top=y,Width=w,Height=40};f.Controls.Add(c);return c; }
@@ -204,26 +193,25 @@ public class TradingClock : Form {
     static readonly string[] EditorZones={"China Standard Time","Eastern Standard Time","GMT Standard Time","Central Standard Time","Tokyo Standard Time","AUS Eastern Standard Time"};
     void EditEvents() {
         SetPassThrough(false);
-        using(var f=Dialog("事件提醒 · 时间明确按所选时区输入",740,530)) {
+        using(var f=Dialog("EIA 公布时间 · 仅倒计时，不弹窗",740,490)) {
             var list=new ListBox {Left=16,Top=16,Width=708,Height=190,HorizontalScrollbar=true};f.Controls.Add(list);
-            Action refresh=()=>{list.Items.Clear();foreach(var e in cfg.Events.OrderBy(e=>e.Utc))list.Items.Add(e);};refresh();
-            TextAt(f,"事件名称（可填写 EIA、API、OPEC、CPI、非农等）",16,218,680);
+            Action refresh=()=>{list.Items.Clear();foreach(var e in cfg.Events.Where(v=>v.Id.StartsWith("eia-")).OrderBy(e=>e.Utc))list.Items.Add(e);};refresh();
+            TextAt(f,"EIA 日程名称",16,218,680);
             var title=new TextBox {Left=16,Top=242,Width=708,MaxLength=100};f.Controls.Add(title);
-            TextAt(f,"事件时间",16,279,180);TextAt(f,"时区",282,279,180);TextAt(f,"提前提醒（分钟）",490,279,200);
+            TextAt(f,"公布时间",16,279,180);TextAt(f,"输入时区",282,279,180);
             var when=new DateTimePicker {Left=16,Top=304,Width=246,Format=DateTimePickerFormat.Custom,CustomFormat="yyyy-MM-dd HH:mm",Value=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,OilEngine.Zone("China Standard Time")).AddHours(1)};f.Controls.Add(when);
-            var zone=ZoneBox(f,282,304);var lead=new NumericUpDown {Left=490,Top=304,Width=110,Minimum=0,Maximum=1440,Value=10};f.Controls.Add(lead);
-            list.SelectedIndexChanged+=delegate {var ev=list.SelectedItem as ClockEvent;if(ev==null)return;title.Text=ev.Title;zone.SelectedIndex=0;when.Value=TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(ev.Utc,DateTimeKind.Utc),OilEngine.Zone(EditorZones[0]));lead.Value=ev.Lead;};
+            var zone=ZoneBox(f,282,304);
+            list.SelectedIndexChanged+=delegate {var ev=list.SelectedItem as ClockEvent;if(ev==null)return;title.Text=ev.Title;zone.SelectedIndex=0;when.Value=TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(ev.Utc,DateTimeKind.Utc),OilEngine.Zone(EditorZones[0]));};
             Action<bool> save=update=>{
                 if(string.IsNullOrWhiteSpace(title.Text))throw new Exception("请输入事件名称。");
                 DateTime utc=OilEngine.ToUtc(when.Value,EditorZones[zone.SelectedIndex]);if(utc<=DateTime.UtcNow)throw new Exception("请选择未来的时间。");
                 var ev=update?list.SelectedItem as ClockEvent:null;if(update && ev==null)throw new Exception("请选择要修改的事件。");
-                if(ev==null){ev=new ClockEvent();cfg.Events.Add(ev);}cfg.Fired.Remove(ev.Id);ev.Title=title.Text.Trim();ev.Utc=utc;ev.Lead=(int)lead.Value;SaveSettings();refresh();
+                if(ev==null){ev=new ClockEvent();ev.Id="eia-"+ev.Id;cfg.Events.Add(ev);}ev.Title=title.Text.Trim();ev.Utc=utc;SaveSettings();refresh();
             };
             ButtonAt(f,"新增",16,350,()=>save(false));ButtonAt(f,"保存修改",133,350,()=>save(true));ButtonAt(f,"删除选中",250,350,()=>{var ev=list.SelectedItem as ClockEvent;if(ev!=null)cfg.Events.Remove(ev);SaveSettings();refresh();});
             ButtonAt(f,"EIA 官方日程",367,350,()=>Process.Start("https://www.eia.gov/petroleum/supply/weekly/schedule.php"));
             ButtonAt(f,"清理过期事件",484,350,()=>{cfg.Events.RemoveAll(v=>v.Utc<DateTime.UtcNow);SaveSettings();refresh();});
-            TextAt(f,"EIA 已载入 2026 年官方日程快照（核对日期：2026-10-14，含已公布延期）。\n其他事件请按官方公告添加；此处不自动下载经济日历。",16,402,710).Height=60;
-            TextAt(f,"程序需运行才能提醒；休眠期间不唤醒电脑。系统勿扰模式可能隐藏通知。",16,472,710);
+            TextAt(f,"EIA 已载入 2026 年官方日程快照（核对日期：2026-10-14，含已公布延期）。\n此处仅维护 EIA 倒计时日期，不弹窗、不播放声音，也不自动下载日程。",16,402,710).Height=60;
             f.ShowDialog(this);
         }
     }
@@ -295,6 +283,8 @@ public class TradingClock : Form {
         Assert(events.Events.First().Utc==utc("2026-10-15T16:00:00Z"),"EIA holiday postponement");
         Assert(OilEngine.Due(utc("2026-10-15T15:51:00Z"),events.Events.First().Utc,10),"Reminder lead");
         Assert(!OilEngine.Due(utc("2026-10-15T17:00:00Z"),events.Events.First().Utc,10),"No stale reminder");
+        Assert(OilEngine.NextWeekdayTime(utc("2026-07-10T14:00:00Z"),"Eastern Standard Time",9)==utc("2026-07-13T13:00:00Z"),"Focus countdown skips weekend");
+        Assert(OilEngine.NextWeekdayTime(utc("2026-10-23T16:00:00Z"),"GMT Standard Time",8)==utc("2026-10-26T08:00:00Z"),"London focus across DST");
         using(var f=new TradingClock(true)) {
             f.Show();
             for(int n=0;n<3;n++){f.cfg.Layout=n;f.ApplyLayout();using(var b=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(b,new Rectangle(Point.Empty,f.Size));b.Save(Path.Combine(dir,"oil-layout-"+n+".png"));}}

@@ -89,6 +89,16 @@ public static class OilEngine {
         var t = TimeZoneInfo.ConvertTimeFromUtc(utc,Zone(zone));
         return t.DayOfWeek != DayOfWeek.Saturday && t.DayOfWeek != DayOfWeek.Sunday && t.Hour >= 8 && t.Hour < 17;
     }
+    public static DateTime NextWeekdayTime(DateTime utc,string zone,int hour) {
+        DateTime local=TimeZoneInfo.ConvertTimeFromUtc(utc,Zone(zone));
+        for(int n=0;n<8;n++) {
+            DateTime day=local.Date.AddDays(n);
+            if(day.DayOfWeek==DayOfWeek.Saturday || day.DayOfWeek==DayOfWeek.Sunday) continue;
+            DateTime target=ToUtc(day.AddHours(hour),zone);
+            if(target>utc) return target;
+        }
+        throw new InvalidOperationException("No weekday found");
+    }
     public static string Countdown(TimeSpan span) {
         if(span.TotalSeconds < 0) return "已到时间";
         return (span.Days > 0 ? span.Days + "天 " : "") + span.Hours.ToString("00") + ":" + span.Minutes.ToString("00") + ":" + span.Seconds.ToString("00");
