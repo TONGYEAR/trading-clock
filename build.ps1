@@ -6,6 +6,6 @@ if (-not (Test-Path -LiteralPath $compiler)) {
 if (-not (Test-Path -LiteralPath $compiler)) { throw '未找到 .NET Framework C# 编译器。' }
 Push-Location $PSScriptRoot
 try {
-    & $compiler /nologo /target:winexe /out:TradingClock.exe /win32icon:TradingClock.ico /reference:System.Windows.Forms.dll /reference:System.Drawing.dll TradingClock.cs
+    & $compiler /nologo /target:winexe /out:TradingClock.exe /win32icon:TradingClock.ico /reference:System.Windows.Forms.dll /reference:System.Drawing.dll TradingClock.cs OilEngine.cs
     if ($LASTEXITCODE -ne 0) { throw '构建失败。请关闭正在运行的时钟后再试。' }
 } finally { Pop-Location }
