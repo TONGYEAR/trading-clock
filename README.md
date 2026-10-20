@@ -8,6 +8,8 @@
 
 ## 使用
 
+可直接拖动窗口四边或四角等比例调整大小，浮窗和普通窗口均支持，文字随之缩放并保存大小。开启“锁定窗口位置与大小”后禁止移动和缩放；使用鼠标穿透时，先双击托盘恢复操作。右键缩放菜单仍可选常用比例。
+
 下载仓库 ZIP 并解压，双击 TradingClock.exe。右键窗口、托盘图标或顶部“设置”打开菜单。
 
 - 标准竖版、紧凑竖版、横条；可贴到屏幕顶部。
@@ -47,6 +49,8 @@ EIA 使用截至 2026-10-14 核对的 2026 年官方日程快照，含已公布�
 Oil Desk is a Windows desktop world clock for traders following WTI crude oil futures (CL / MCL). The application interface is currently in Chinese.
 
 ### Getting started
+
+Drag any window edge or corner to resize proportionally in either floating or standard mode. Text scales with the window and the size is saved. Position-and-size locking disables moving and resizing. If click-through is enabled, double-click the tray icon first to restore interaction. Preset scaling remains available in the context menu.
 
 Download the repository ZIP, extract it, and launch TradingClock.exe. No installation is required. Right-click the window or tray icon, or click 设置 (Settings).
 

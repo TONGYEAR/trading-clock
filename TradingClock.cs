@@ -24,6 +24,8 @@ public class TradingClock : Form {
     ContextMenuStrip menu;
     NotifyIcon tray;
     bool testing, quitting, passThrough, hotkey;
+    bool resizing;
+    [StructLayout(LayoutKind.Sequential)] struct NativeRect { public int Left,Top,Right,Bottom; }
     float scale=1;
     int canvasW=404,canvasH;
     const string RunKey=@"Software\Microsoft\Windows\CurrentVersion\Run", StartupName="ThreeCityTradingClock";
@@ -62,13 +64,49 @@ public class TradingClock : Form {
     }
     protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); if(!testing) hotkey=RegisterHotKey(Handle,1,0x0002|0x0004|0x4000,(uint)Keys.T); }
     protected override void OnHandleDestroyed(EventArgs e) { if(hotkey) UnregisterHotKey(Handle,1); base.OnHandleDestroyed(e); }
-    protected override void WndProc(ref Message m) { if(m.Msg==0x0312) { RestoreClock(); return; } if(m.Msg==0x0112 && (m.WParam.ToInt64()&0xFFF0)==0xF010 && cfg.Locked) return; base.WndProc(ref m); }
+    protected override void WndProc(ref Message m) {
+        if(m.Msg==0x0312) { RestoreClock(); return; }
+        if(m.Msg==0x0112 && cfg!=null && cfg.Locked && ((m.WParam.ToInt64()&0xFFF0)==0xF010 || (m.WParam.ToInt64()&0xFFF0)==0xF000)) return;
+        if(m.Msg==0x0214 && canvasH>0) {
+            var r=(NativeRect)Marshal.PtrToStructure(m.LParam,typeof(NativeRect));
+            var bounds=FitResize(new Rectangle(r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top),m.WParam.ToInt32(),canvasW,canvasH,new Size(Width-ClientSize.Width,Height-ClientSize.Height),Screen.FromControl(this).WorkingArea.Size);
+            r.Left=bounds.Left;r.Top=bounds.Top;r.Right=bounds.Right;r.Bottom=bounds.Bottom;
+            Marshal.StructureToPtr(r,m.LParam,false);m.Result=new IntPtr(1);return;
+        }
+        base.WndProc(ref m);
+        if(m.Msg==0x0084 && cfg!=null && cfg.Floating && !cfg.Locked && !passThrough) {
+            long raw=m.LParam.ToInt64();var p=PointToClient(new Point((short)(raw&0xffff),(short)((raw>>16)&0xffff)));
+            int hit=ResizeHit(p,ClientSize);if(hit!=0)m.Result=new IntPtr(hit);
+        }
+    }
+    static int ResizeHit(Point p,Size s) {
+        if(p.X<0 || p.Y<0 || p.X>=s.Width || p.Y>=s.Height)return 0;
+        bool l=p.X<8,r=p.X>=s.Width-8,t=p.Y<8,b=p.Y>=s.Height-8;
+        return t?(l?13:r?14:12):b?(l?16:r?17:15):l?10:r?11:0;
+    }
+    static Rectangle FitResize(Rectangle r,int edge,int cw,int ch,Size frame,Size screen) {
+        double requested=(edge==3 || edge==6)?(r.Height-frame.Height)/(double)ch:(r.Width-frame.Width)/(double)cw;
+        double maximum=Math.Min(3,Math.Min((screen.Width-frame.Width)/(double)cw,(screen.Height-frame.Height)/(double)ch));
+        double factor=Math.Max(Math.Min(.60,maximum),Math.Min(maximum,requested));
+        int w=(int)Math.Round(cw*factor)+frame.Width,h=(int)Math.Round(ch*factor)+frame.Height;
+        bool left=edge==1||edge==4||edge==7,top=edge==3||edge==4||edge==5;
+        return new Rectangle(left?r.Right-w:r.Left,top?r.Bottom-h:r.Top,w,h);
+    }
+    protected override void OnResizeBegin(EventArgs e) { resizing=true;base.OnResizeBegin(e); }
+    protected override void OnResize(EventArgs e) {
+        base.OnResize(e);
+        if(resizing && canvasH>0) {scale=Math.Min(ClientSize.Width/(float)canvasW,ClientSize.Height/(float)canvasH);Invalidate();}
+    }
+    protected override void OnResizeEnd(EventArgs e) {
+        if(resizing && canvasH>0) {scale=Math.Min(ClientSize.Width/(float)canvasW,ClientSize.Height/(float)canvasH);cfg.Scale=(int)Math.Round(scale*100);}
+        resizing=false;base.OnResizeEnd(e);SaveSettings();Invalidate();
+    }
     void LoadSettings() {
         try { using(var f=File.OpenRead(Path.Combine(folder,"settings.xml"))) cfg=(ClockSettings)new XmlSerializer(typeof(ClockSettings)).Deserialize(f); }
         catch {
             try { var p=File.ReadAllText(Path.Combine(folder,"position.txt")).Split(','); cfg.X=int.Parse(p[0]); cfg.Y=int.Parse(p[1]); if(p.Length>2) cfg.Pinned=cfg.Floating=bool.Parse(p[2]); } catch { }
         }
-        cfg.Scale=Math.Max(75,Math.Min(175,cfg.Scale)); cfg.Opacity=Math.Max(60,Math.Min(100,cfg.Opacity)); cfg.Layout=Math.Max(0,Math.Min(2,cfg.Layout));
+        cfg.Scale=Math.Max(60,Math.Min(300,cfg.Scale)); cfg.Opacity=Math.Max(60,Math.Min(100,cfg.Opacity)); cfg.Layout=Math.Max(0,Math.Min(2,cfg.Layout));
         cfg.Cities=cfg.Cities.Where(i=>i>=0 && i<OilEngine.Names.Length).Distinct().ToList(); if(cfg.Cities.Count==0) cfg.Cities.AddRange(new int[]{0,1,2});
     }
     void SaveSettings() {
@@ -86,7 +124,7 @@ public class TradingClock : Form {
         scale=cfg.Scale/100f;
         var area=Screen.FromPoint(Location).WorkingArea;
         scale=Math.Min(scale,Math.Min((area.Width-16f)/canvasW,(area.Height-16f)/canvasH));
-        FormBorderStyle=cfg.Floating?FormBorderStyle.None:FormBorderStyle.FixedSingle; MaximizeBox=false;
+        FormBorderStyle=cfg.Floating?FormBorderStyle.None:FormBorderStyle.Sizable; MaximizeBox=false;
         TopMost=cfg.Pinned; Opacity=cfg.Opacity/100.0;
         ClientSize=new Size((int)(canvasW*scale),(int)(canvasH*scale));
         Location=new Point(Math.Max(area.Left,Math.Min(Left,area.Right-Width)),Math.Max(area.Top,Math.Min(Top,area.Bottom-Height)));
@@ -118,7 +156,7 @@ public class TradingClock : Form {
         var sizes=new ToolStripMenuItem("字体 / 整体缩放"); foreach(int v in new int[]{75,100,125,150,175}) { int n=v;sizes.DropDownItems.Add(Check(v+"%",()=>cfg.Scale==n,()=>{cfg.Scale=n;ApplyLayout();})); } m.Items.Add(sizes);
         var opacity=new ToolStripMenuItem("透明度"); foreach(int v in new int[]{100,90,80,70}) { int n=v;opacity.DropDownItems.Add(Check(v+"%",()=>cfg.Opacity==n,()=>{cfg.Opacity=n;ApplyLayout();})); } m.Items.Add(opacity);
         var cities=new ToolStripMenuItem("显示城市"); for(int i=0;i<OilEngine.Names.Length;i++) { int n=i;cities.DropDownItems.Add(Check(OilEngine.Names[n],()=>cfg.Cities.Contains(n),()=>{if(cfg.Cities.Contains(n)){if(cfg.Cities.Count==1)throw new Exception("至少保留一个城市。");cfg.Cities.Remove(n);}else cfg.Cities.Add(n);ApplyLayout();})); } m.Items.Add(cities);
-        m.Items.Add(Check("锁定窗口位置",()=>cfg.Locked,()=>cfg.Locked=!cfg.Locked));
+        m.Items.Add(Check("锁定窗口位置与大小",()=>cfg.Locked,()=>cfg.Locked=!cfg.Locked));
         m.Items.Add(Check("鼠标穿透（托盘可恢复）",()=>passThrough,()=>SetPassThrough(!passThrough)));
         m.Items.Add(new ToolStripSeparator());
         var market=new ToolStripMenuItem("石油交易时段");
@@ -185,7 +223,7 @@ public class TradingClock : Form {
         Label(g,"下一收盘  "+TimeZoneInfo.ConvertTimeFromUtc(barClose,OilEngine.Zone("China Standard Time")).ToString("HH:mm:ss"),12,Color.White,canvasW-210,timerY+11);
         Label(g,"上海时间 · 按系统时钟对齐",10,muted,canvasW-210,timerY+35);
         Label(g,"时段为常规参考；EIA 为日程快照；日期按上海显示",9,muted,16,canvasH-26);
-        Label(g,"右键设置 · 托盘恢复",9,muted,16,canvasH-13);
+        Label(g,"拖动边缘缩放 · 右键设置 · 托盘恢复",9,muted,16,canvasH-13);
     }
     void CountdownRow(Graphics g,string name,DateTime target,DateTime utc,float y,Color color) {
         Label(g,name,13,color,16,y,true);
@@ -266,6 +304,16 @@ public class TradingClock : Form {
     }
     static void Assert(bool value,string message) {if(!value)throw new Exception(message);}
     static void RunTests(string dir) {
+        var edgePoints=new Point[]{new Point(1,100),new Point(399,100),new Point(200,1),new Point(1,1),new Point(399,1),new Point(200,499),new Point(1,499),new Point(399,499)};
+        var hitCodes=new int[]{10,11,12,13,14,15,16,17};
+        for(int i=0;i<8;i++) {
+            Assert(ResizeHit(edgePoints[i],new Size(400,500))==hitCodes[i],"Resize edge hit "+i);
+            var resized=FitResize(new Rectangle(100,100,600,700),i+1,404,544,Size.Empty,new Size(1920,1080));
+            Assert(Math.Abs(resized.Width/(double)resized.Height-404.0/544)<.003,"Aspect ratio edge "+i);
+            if(i==0||i==3||i==6)Assert(resized.Right==700,"Left edge anchors right");
+            if(i==2||i==3||i==4)Assert(resized.Bottom==800,"Top edge anchors bottom");
+        }
+        Assert(ResizeHit(new Point(100,100),new Size(400,500))==0,"Interior remains draggable");
         var s=new ClockSettings();
         Func<string,DateTime> utc=t=>DateTime.Parse(t,null,System.Globalization.DateTimeStyles.AdjustToUniversal|System.Globalization.DateTimeStyles.AssumeUniversal);
         Assert(OilEngine.NextFiveMinuteClose(utc("2026-10-20T12:27:40Z"))==utc("2026-10-20T12:30:00Z"),"Bar close aligned to 30");
@@ -300,10 +348,16 @@ public class TradingClock : Form {
         Assert(OilEngine.NextWeekdayTime(utc("2026-10-23T16:00:00Z"),"GMT Standard Time",8)==utc("2026-10-26T08:00:00Z"),"London focus across DST");
         using(var f=new TradingClock(true)) {
             f.Show();
+            var corner=f.PointToScreen(new Point(2,2));
+            var hit=SendMessage(f.Handle,0x0084,IntPtr.Zero,new IntPtr((corner.Y<<16)|(corner.X&0xffff)));
+            Assert(hit.ToInt32()==13,"Native floating corner hit-test");
+            f.OnResizeBegin(EventArgs.Empty);f.ClientSize=new Size(485,653);f.OnResizeEnd(EventArgs.Empty);
+            Assert(f.cfg.Scale==120,"Resize saves custom scale");
+            f.cfg.Scale=100;f.ApplyLayout();
             for(int n=0;n<3;n++){f.cfg.Layout=n;f.ApplyLayout();using(var b=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(b,new Rectangle(Point.Empty,f.Size));b.Save(Path.Combine(dir,"oil-layout-"+n+".png"));}}
             f.cfg.Cities=Enumerable.Range(0,7).ToList();f.cfg.Scale=175;f.ApplyLayout();Assert(f.Width<=Screen.FromControl(f).WorkingArea.Width,"Fit screen");
             f.SetPassThrough(true);Assert((GetWindowLong(f.Handle,-20)&0x20)!=0,"Click through on");f.SetPassThrough(false);Assert((GetWindowLong(f.Handle,-20)&0x20)==0,"Click through off");
-            f.cfg.Floating=false;f.cfg.Pinned=false;f.ApplyLayout();Assert(f.FormBorderStyle==FormBorderStyle.FixedSingle&&!f.TopMost,"Normal window mode");
+            f.cfg.Floating=false;f.cfg.Pinned=false;f.ApplyLayout();Assert(f.FormBorderStyle==FormBorderStyle.Sizable&&!f.TopMost,"Normal window mode");
             Action<Action,string> captureDialog=(open,name)=>{
                 using(var capture=new System.Windows.Forms.Timer()) {
                     capture.Interval=200;
