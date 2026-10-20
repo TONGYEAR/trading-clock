@@ -20,7 +20,7 @@
 
 ## 重要时间点倒计时
 
-底部显示 **5 分钟 K 线收盘倒计时**：自动对齐每小时 00、05、10…25、30、35 分钟，显示分秒和下一收盘的上海时间。到点自动进入下一根，无需开始、暂停或重置；最后 30 秒变为金色，不弹窗、不响铃。它按电脑系统时钟推算，不连接行情平台；休市时仍按时间边界计时，平台实际 K 线以行情软件为准。
+城市时钟下方（默认上海下方）、重要时间点列表上方显示 **5 分钟 K 线收盘倒计时**：自动对齐每小时 00、05、10…25、30、35 分钟，显示分秒和下一收盘的上海时间。到点自动进入下一根，无需开始、暂停或重置；最后 30 秒变为金色，不弹窗、不响铃。它按电脑系统时钟推算，不连接行情平台；休市时仍按时间边界计时，平台实际 K 线以行情软件为准。
 
 底部显示四项，附上海时间对应的日期和时刻：
 
@@ -60,7 +60,7 @@ Download the repository ZIP, extract it, and launch TradingClock.exe. No install
 
 ### Key-time countdowns
 
-The **five-minute candle-close countdown** automatically aligns to minutes 00, 05, 10, …25, 30, 35 of each hour. It shows minutes and seconds remaining, plus the next boundary in Shanghai time, and rolls into the next candle automatically. No manual controls are needed. The last 30 seconds turn gold, without sounds or notifications. It uses your computer's clock, not a broker feed, and continues during market closures; actual candle availability depends on your trading platform.
+The **five-minute candle-close countdown**, placed directly below the city clocks and above the key-time list, automatically aligns to minutes 00, 05, 10, …25, 30, 35 of each hour. It shows minutes and seconds remaining, plus the next boundary in Shanghai time, and rolls into the next candle automatically. No manual controls are needed. The last 30 seconds turn gold, without sounds or notifications. It uses your computer's clock, not a broker feed, and continues during market closures; actual candle availability depends on your trading platform.
 
 The bottom panel displays four countdowns, each with its target date and time in Shanghai:
 
@@ -92,3 +92,4 @@ Schedule sources checked on 2026-10-14:
 - [CME holiday hours](https://www.cmegroup.com/trading-hours.html)
 - [ICE Brent](https://www.ice.com/products/219/Brent-Crude-Futures)
 - [EIA release schedule](https://www.eia.gov/petroleum/supply/weekly/schedule.php)
+

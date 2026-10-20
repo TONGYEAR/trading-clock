@@ -169,14 +169,14 @@ public class TradingClock : Form {
                 if(cfg.Layout!=1) { Label(g,OilEngine.Codes[i],11,muted,x+12,y+36,false,"Consolas");Label(g,local.ToString("MM/dd ddd",System.Globalization.CultureInfo.InvariantCulture),12,muted,x+255,y+45,false,"Consolas");Label(g,OilEngine.Zone(OilEngine.ZoneIds[i]).IsDaylightSavingTime(local)?"DST":"STD",10,muted,x+12,y+53,false,"Consolas"); }
             }
         }
-        float fy=canvasH-266;var st=OilEngine.State(utc,cfg);
+        float fy=canvasH-200;var st=OilEngine.State(utc,cfg);
         Label(g,"重要时间 / COUNTDOWN",12,green,16,fy,true);
         CountdownRow(g,cfg.Market+" "+st.Action+" · 常规",st.Next,utc,fy+24,st.Open?green:gold);
         var next=cfg.Events.Where(v=>v.Id.StartsWith("eia-") && v.Utc>utc).OrderBy(v=>v.Utc).FirstOrDefault();
         CountdownRow(g,"EIA 原油库存",next==null?DateTime.MaxValue:next.Utc,utc,fy+60,gold);
         CountdownRow(g,"纽约 09:00 · 关注",OilEngine.NextWeekdayTime(utc,"Eastern Standard Time",9),utc,fy+96,Color.White);
         CountdownRow(g,"伦敦 08:00 · 关注",OilEngine.NextWeekdayTime(utc,"GMT Standard Time",8),utc,fy+132,Color.White);
-        float timerY=canvasH-91;
+        float timerY=canvasH-266;
         using(var brush=new SolidBrush(Color.FromArgb(23,37,48)))g.FillRectangle(brush,12,timerY,canvasW-24,61);
         Label(g,"5 分钟 K 线收盘",12,muted,22,timerY+4);
         var barClose=OilEngine.NextFiveMinuteClose(utc);
