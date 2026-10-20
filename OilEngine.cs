@@ -4,19 +4,6 @@ using System.Linq;
 using System.IO;
 using System.Xml.Serialization;
 
-public class FiveMinuteTimer {
-    readonly Func<double> now;
-    double remaining=300, started;
-    bool running;
-    public FiveMinuteTimer(Func<double> clock=null) { now=clock ?? (()=>(double)System.Diagnostics.Stopwatch.GetTimestamp()/System.Diagnostics.Stopwatch.Frequency); }
-    public double Seconds { get { return Math.Max(0,remaining-(running?now()-started:0)); } }
-    public bool Running { get { return running && Seconds>0; } }
-    public void Toggle() {
-        if(Running) { remaining=Seconds;running=false; }
-        else { if(Seconds<=0)remaining=300;started=now();running=true; }
-    }
-    public void Reset() { remaining=300;running=false; }
-}
 public class ClockSettings {
     public int X = -1, Y = 80, Layout = 0, Scale = 100, Opacity = 100;
     public bool Floating = true, Pinned = true, Locked = false, MarketAlerts = true, Sound = true;
@@ -49,6 +36,10 @@ public class MarketState {
     public string Action;
 }
 public static class OilEngine {
+    public static DateTime NextFiveMinuteClose(DateTime utc) {
+        long interval=TimeSpan.TicksPerMinute*5;
+        return new DateTime(utc.Ticks-utc.Ticks%interval+interval,utc.Kind);
+    }
     public static readonly string[] Names = {"伦敦","纽约","上海","东京","香港","悉尼","芝加哥"};
     public static readonly string[] Codes = {"LONDON","NEW YORK","SHANGHAI","TOKYO","HONG KONG","SYDNEY","CHICAGO"};
     public static readonly string[] ZoneIds = {"GMT Standard Time","Eastern Standard Time","China Standard Time","Tokyo Standard Time","China Standard Time","AUS Eastern Standard Time","Central Standard Time"};
