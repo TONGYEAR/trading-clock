@@ -20,6 +20,8 @@
 
 ## 重要时间点倒计时
 
+底部另有独立的 **5 分钟倒计时**：点击“开始”，支持暂停、继续、重置；到零显示“已结束”，可再次开始。不弹窗、不响铃，重启程序后回到未开始的 05:00。右键菜单也可控制计时。
+
 底部显示四项，附上海时间对应的日期和时刻：
 
 1. WTI 下一次开市或休市（依据常规时段）。
@@ -57,6 +59,8 @@ Download the repository ZIP, extract it, and launch TradingClock.exe. No install
 - Personal settings are stored in %LOCALAPPDATA%/TradingClock/settings.xml, outside this repository.
 
 ### Key-time countdowns
+
+A separate **five-minute timer** below the key times supports Start, Pause, Resume, and Reset. At zero it shows a completed state and can be restarted. It does not play a sound or show a notification. Restarting the app resets it to an idle 05:00. Timer controls are also available in the context menu.
 
 The bottom panel displays four countdowns, each with its target date and time in Shanghai:
 

@@ -26,6 +26,7 @@ public class TradingClock : Form {
     bool testing, quitting, passThrough, hotkey;
     float scale=1;
     int canvasW=404,canvasH;
+    readonly FiveMinuteTimer focusTimer=new FiveMinuteTimer();
     const string RunKey=@"Software\Microsoft\Windows\CurrentVersion\Run", StartupName="ThreeCityTradingClock";
     static string StartupCommand { get { return "\""+Application.ExecutablePath+"\""; } }
     static bool StartupEnabled() { using(var k=Registry.CurrentUser.OpenSubKey(RunKey)) return k!=null && string.Equals(k.GetValue(StartupName) as string,StartupCommand,StringComparison.OrdinalIgnoreCase); }
@@ -49,6 +50,10 @@ public class TradingClock : Form {
         MouseDown+=delegate(object sender,MouseEventArgs e) {
             if(e.Button!=MouseButtons.Left) return;
             float x=e.X/scale,y=e.Y/scale;
+            if(y>=canvasH-67 && y<=canvasH-34) {
+                if(x>=canvasW-154 && x<canvasW-82) { focusTimer.Toggle();Invalidate();return; }
+                if(x>=canvasW-78 && x<=canvasW-14) { focusTimer.Reset();Invalidate();return; }
+            }
             if(y<36 && x>canvasW-35) { Hide(); return; }
             if(y<36 && x>canvasW-78) { menu.Show(this,e.Location); return; }
             if(!cfg.Locked) { ReleaseCapture(); SendMessage(Handle,0xA1,new IntPtr(2),IntPtr.Zero); }
@@ -82,7 +87,7 @@ public class TradingClock : Form {
     }
     void ApplyLayout() {
         canvasW=cfg.Layout==2 ? Math.Max(600,Math.Min(4,cfg.Cities.Count)*200+24) : 404;
-        canvasH=cfg.Layout==2 ? 40+(int)Math.Ceiling(cfg.Cities.Count/4.0)*90+204 : 40+cfg.Cities.Count*(cfg.Layout==1?53:78)+204;
+        canvasH=cfg.Layout==2 ? 40+(int)Math.Ceiling(cfg.Cities.Count/4.0)*90+270 : 40+cfg.Cities.Count*(cfg.Layout==1?53:78)+270;
         scale=cfg.Scale/100f;
         var area=Screen.FromPoint(Location).WorkingArea;
         scale=Math.Min(scale,Math.Min((area.Width-16f)/canvasW,(area.Height-16f)/canvasH));
@@ -128,6 +133,8 @@ public class TradingClock : Form {
         market.DropDownItems.Add(Item("ICE 官方交易时间",()=>Process.Start("https://www.ice.com/products/219/Brent-Crude-Futures")));
         m.Items.Add(market);
         m.Items.Add(Item("编辑 EIA 公布时间…",EditEvents));
+        m.Items.Add(Item("5 分钟计时：开始 / 暂停",()=>focusTimer.Toggle()));
+        m.Items.Add(Item("5 分钟计时：重置",()=>focusTimer.Reset()));
         m.Items.Add(Check("开机自动启动（登录 Windows 后）",StartupEnabled,()=>SetStartup(!StartupEnabled())));
         m.Items.Add(Item("隐藏到系统托盘",()=>Hide()));
         m.Items.Add(new ToolStripSeparator());
@@ -169,13 +176,25 @@ public class TradingClock : Form {
                 if(cfg.Layout!=1) { Label(g,OilEngine.Codes[i],11,muted,x+12,y+36,false,"Consolas");Label(g,local.ToString("MM/dd ddd",System.Globalization.CultureInfo.InvariantCulture),12,muted,x+255,y+45,false,"Consolas");Label(g,OilEngine.Zone(OilEngine.ZoneIds[i]).IsDaylightSavingTime(local)?"DST":"STD",10,muted,x+12,y+53,false,"Consolas"); }
             }
         }
-        float fy=canvasH-200;var st=OilEngine.State(utc,cfg);
+        float fy=canvasH-266;var st=OilEngine.State(utc,cfg);
         Label(g,"重要时间 / COUNTDOWN",12,green,16,fy,true);
         CountdownRow(g,cfg.Market+" "+st.Action+" · 常规",st.Next,utc,fy+24,st.Open?green:gold);
         var next=cfg.Events.Where(v=>v.Id.StartsWith("eia-") && v.Utc>utc).OrderBy(v=>v.Utc).FirstOrDefault();
         CountdownRow(g,"EIA 原油库存",next==null?DateTime.MaxValue:next.Utc,utc,fy+60,gold);
         CountdownRow(g,"纽约 09:00 · 关注",OilEngine.NextWeekdayTime(utc,"Eastern Standard Time",9),utc,fy+96,Color.White);
         CountdownRow(g,"伦敦 08:00 · 关注",OilEngine.NextWeekdayTime(utc,"GMT Standard Time",8),utc,fy+132,Color.White);
+        float timerY=canvasH-91;
+        using(var brush=new SolidBrush(Color.FromArgb(23,37,48)))g.FillRectangle(brush,12,timerY,canvasW-24,61);
+        Label(g,"5 分钟倒计时",12,muted,22,timerY+4);
+        int seconds=(int)Math.Ceiling(focusTimer.Seconds);
+        Label(g,(seconds/60).ToString("00")+":"+(seconds%60).ToString("00"),27,seconds==0?gold:green,22,timerY+23,true,"Consolas");
+        if(seconds==0)Label(g,"已结束",11,gold,115,timerY+32);
+        using(var brush=new SolidBrush(Color.FromArgb(39,59,73))) {
+            g.FillRectangle(brush,canvasW-154,canvasH-67,72,30);
+            g.FillRectangle(brush,canvasW-78,canvasH-67,64,30);
+        }
+        Label(g,focusTimer.Running?"暂停":seconds==0?"再开始":seconds<300?"继续":"开始",13,green,canvasW-144,canvasH-61);
+        Label(g,"重置",13,Color.White,canvasW-66,canvasH-61);
         Label(g,"时段为常规参考；EIA 为日程快照；日期按上海显示",9,muted,16,canvasH-26);
         Label(g,"右键设置 · 托盘恢复",9,muted,16,canvasH-13);
     }
@@ -258,6 +277,14 @@ public class TradingClock : Form {
     }
     static void Assert(bool value,string message) {if(!value)throw new Exception(message);}
     static void RunTests(string dir) {
+        double time=0;var focus=new FiveMinuteTimer(()=>time);
+        Assert(focus.Seconds==300&&!focus.Running,"Timer initial");
+        focus.Toggle();time=62;Assert(focus.Seconds==238&&focus.Running,"Timer elapsed");
+        focus.Toggle();time=120;Assert(focus.Seconds==238&&!focus.Running,"Timer pause");
+        focus.Toggle();time=358;Assert(focus.Seconds==0&&!focus.Running,"Timer complete");
+        time=500;Assert(focus.Seconds==0,"Timer clamps zero");
+        focus.Toggle();Assert(focus.Seconds==300&&focus.Running,"Timer restart");
+        focus.Reset();Assert(focus.Seconds==300&&!focus.Running,"Timer reset");
         var s=new ClockSettings();
         Func<string,DateTime> utc=t=>DateTime.Parse(t,null,System.Globalization.DateTimeStyles.AdjustToUniversal|System.Globalization.DateTimeStyles.AssumeUniversal);
         Assert(OilEngine.State(utc("2026-07-13T20:59:59Z"),s).Open,"WTI before maintenance");
